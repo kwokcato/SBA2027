@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>康健綜合診所 - 統一登入系統</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* 底部預設資料區專用樣式 */
+        .default-data-section { 
+            margin-top: 40px; 
+            border-top: 2px solid #ddd; 
+            padding: 20px; 
+            background-color: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 1px 5px rgba(0,0,0,0.05); 
+        }
+        .default-data-section h3 { color: #2c3e50; text-align: center; margin-bottom: 15px; }
+        .data-desc { font-size: 0.85em; color: #7f8c8d; margin-bottom: 15px; text-align: center; }
+        .mini-table {  (SQL - Select)
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 0.85em; 
+            margin-bottom: 25px; 
+            border: 1px solid #eee; 
+        }
+        .mini-table th, .mini-table td { border: 1px solid #eee; padding: 10px; text-align: left; }
+        .mini-table th { background-color: #f8f9fa; color: #333; }
+        .mini-table tr:nth-child(even) { background-color: #fafafa; }
+        .highlight-row { background-color: #fff9db !important; font-weight: bold; } /* 突出顯示新增記錄 */
+        .tag { padding: 2px 6px; border-radius: 3px; font-size: 0.8em; color: white; }
+        .tag-booker { background-color: #3498db; }
+        .tag-staff { background-color: #e67e22; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>康健綜合診所</h1>
+        <h2>歡迎登入</h2>
+        <p style="text-align: center; color: #666; font-size: 0.9em;">(請輸入電話/帳號及密碼進行登入)</p>
+        
+        <div class="form-group">
+            <label>登入身分</label>
+            <select id="role">
+                <option value="booker">預約人士 (輸入電話)</option>
+                <option value="nurse">護士 (醫護人員)</option>
+                <option value="doctor">醫生 (醫護人員)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label id="usernameLabel">帳號 / 電話</label>
+            <input type="text" id="username" placeholder="9XXX XXXX / 員工編號" required>
+        </div>
+        
+        <div class="form-group">
+            <label>密碼</label>
+            <input type="password" id="password" placeholder="預設 0000" required>
+        </div>
+        
+        <button id="loginBtn">登入系統</button>
+        
+        <div id="newuserLink" class="nav-links" style="margin-top: 15px;">
+            <p style="color: #666;">新用戶？ <a href="newuser.html">立即登記帳號</a></p>
+        </div>
+    </div>
+
+    <script id="userData" type="application/json">
+    {
+        "users": {
+            "booker": [
+                { "phone": "90001111", "password": "0000", "name": "Chan Tai Man" },
+                { "phone": "98881234", "password": "0000", "name": "Lee Hoi Sin" },
+                { "phone": "91234567", "password": "0000", "name": "Ho Tung Nam" }
+            ],
+            "nurse": [
+                { "id": "nurse01", "password": "0000", "name": "Nurse Lucy" }
+            ],
+            "doctor": [
+                { "name": "Dr. Chan", "password": "0000" },
+                { "name": "Dr. Wong", "password": "0000" }
+            ]
+        }
+    }
+    </script>
+
+    <script>
+        window.onload = function() {
+            // --- 核心邏輯：初始化模擬數據庫 ---
+            // 每次載入時重新檢查或初始化，確保包含您要求的特定記錄
+            const defaultAppointments = [
+                { id: 2001, name: "Chan Tai Man", phone: "90001111", date: "2026-05-10", session: "AM", doctor: "Dr. Chan", quotaNumber: 1 },
+                { id: 2002, name: "Lee Hoi Sin", phone: "98881234", date: "2026-05-10", session: "AM", doctor: "Dr. Chan", quotaNumber: 2 },
+                { id: 2003, name: "Chan Tai Man", phone: "90001111", date: "2026-05-16", session: "AM", doctor: "Dr. Wong", quotaNumber: 1 },
+                { id: 2004, name: "Ho Tung Nam", phone: "91234567", date: "2026-05-16", session: "AM", doctor: "Dr. Wong", quotaNumber: 2 },
+                // --- 修訂要求：加入 91234567 16/5 下午 Dr. Chan ---
+                { id: 2005, name: "Ho Tung Nam", phone: "91234567", date: "2026-05-16", session: "PM", doctor: "Dr. Chan", quotaNumber: 1 }
+            ];
+
+            // 儲存到 localStorage 供其他頁面讀取
+            localStorage.setItem('clinic_appts', JSON.stringify(defaultAppointments));
+            localStorage.setItem('clinic_appts_initialized', 'true');
+
+            // 執行表格填充
+            populateDefaultTables();
+        };
+
+        // 登入驗證
+        document.getElementById('loginBtn').addEventListener('click', function() {
+            const role = document.getElementById('role').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const jsonData = JSON.parse(document.getElementById('userData').textContent);
+            const userList = jsonData.users[role];
+
+            const matched = userList.find(u => 
+                (role === 'booker' ? u.phone === username : (role === 'nurse' ? u.id === username : u.name === username)) 
+                && u.password === password
+            );
+
+            if (matched) {
+                sessionStorage.setItem('userRole', role);
+                if (role === 'booker') {
+                    sessionStorage.setItem('currentPatient', JSON.stringify(matched));
+                    window.location.href = 'book.html';
+                } else {
+                    sessionStorage.setItem('username', matched.name);
+                    window.location.href = 'staff.html';
+                }
+            } else {
+                alert('帳號或密碼錯誤（提示：密碼為 0000）');
+            }
+        });
+
+        // 動態生成底部表格
+        function populateDefaultTables() {
+            const jsonData = JSON.parse(document.getElementById('userData').textContent);
+            const userBody = document.getElementById('defaultUsersBody');
+            const apptBody = document.getElementById('defaultApptsBody');
+            
+            // 1. 填充用戶
+            userBody.innerHTML = '';
+            ['booker', 'nurse', 'doctor'].forEach(role => {
+                jsonData.users[role].forEach(u => {
+                    const id = role === 'booker' ? u.phone : (role === 'nurse' ? u.id : u.name);
+                    userBody.innerHTML += `
+                        <tr>
+                            <td><span class="tag ${role === 'booker' ? 'tag-booker' : 'tag-staff'}">${role}</span></td>
+                            <td>${id}</td>
+                            <td>${u.name}</td>
+                            <td>0000</td>
+                        </tr>`;
+                });
+            });
+
+            // 2. 填充預約 (Highlight 特定要求記錄)
+            apptBody.innerHTML = '';
+            const appts = JSON.parse(localStorage.getItem('clinic_appts'));
+            appts.forEach(a => {
+                // 如果是剛加入的那一條記錄，使用 highlight 樣式
+                const isNewReq = (a.phone === '91234567' && a.date === '2026-05-16' && a.session === 'PM');
+                apptBody.innerHTML += `
+                    <tr class="${isNewReq ? 'highlight-row' : ''}">
+                        <td>${a.phone}</td>
+                        <td>${a.name}</td>
+                        <td>${a.date}</td>
+                        <td>${a.session === 'AM' ? '上午' : '下午'}</td>
+                        <td>${a.doctor}</td>
+                        <td>${a.quotaNumber}</td>
+                    </tr>`;
+            });
+        }
+    </script>
+
+    <div class="container default-data-section">
+        <h3>系統模擬數據庫狀態</h3>
+        <p class="data-desc">以下為系統初始化的預設數據，可用於測試登入及醫護查詢功能：</p>
+
+        <h4>1. 用戶帳戶表 (User DB)</h4>
+        <table class="mini-table">
+            <thead>
+                <tr><th>角色</th><th>帳號/電話</th><th>姓名</th><th>密碼</th></tr>
+            </thead>
+            <tbody id="defaultUsersBody"></tbody>
+        </table>
+
+        <h4>2. 預約紀錄表 (Appointment DB)</h4>
+        <table class="mini-table">
+            <thead>
+                <tr><th>電話</th><th>姓名</th><th>日期</th><th>時段</th><th>醫生</th><th>籌號</th></tr>
+            </thead>
+            <tbody id="defaultApptsBody"></tbody>
+        </table>
+    </div>
+
+</body>
+</html>
