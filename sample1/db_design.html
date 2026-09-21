@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>診所預約系統 - 數據庫架構 (獨立實體版)</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; line-height: 1.6; color: #333; max-width: 1000px; margin: 0 auto; padding: 20px; background-color: #f4f7f6; }
+        h1 { text-align: center; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; border-left: 5px solid #3498db; padding-left: 10px; background: #fff; padding: 10px; }
+        h3 { color: #16a085; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 25px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #3498db; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .sql-code { display: block; background-color: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; font-family: "Consolas", monospace; font-size: 0.9em; margin: 10px 0; white-space: pre-wrap; }
+        .keyword { color: #3498db; font-weight: bold; }
+        .var { color: #e67e22; }
+        .note { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .sba-box { background-color: #d4edda; border: 1px solid #c3e6cb; padding: 20px; border-radius: 5px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+    <h1>診所預約系統：數據庫設計修訂 (SQL-92)</h1>
+
+    <div class="note">
+        <strong>修訂重點：</strong> 
+        將「預約人士」與「醫護人員」拆分為獨立實體表。
+        <ul>
+            <li><strong>Patient 表：</strong> 使用「電話」作為主鍵及登入帳號。</li>
+            <li><strong>Staff 表：</strong> 使用「員工編號」作為主鍵及登入帳號。</li>
+        </ul>
+    </div>
+
+    <h2>一、 實體關係圖 (ERD) 與 表結構</h2>
+
+    <h3>1. Patient 表 (預約人士資料)</h3>
+    <table>
+        <thead>
+            <tr><th>欄位</th><th>類型</th><th>描述</th><th>備註</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>Phone</strong></td><td>VARCHAR(8)</td><td>電話號碼</td><td><strong>Primary Key (PK)</strong></td></tr>
+            <tr><td>Password</td><td>VARCHAR(255)</td><td>登入密碼</td><td>預設為 '0000'</td></tr>
+            <tr><td>Name</td><td>VARCHAR(100)</td><td>姓名</td><td></td></tr>
+            <tr><td>DOB</td><td>DATE</td><td>出生日期</td><td>格式: YYYY-MM-DD</td></tr>
+            <tr><td>HKID</td><td>VARCHAR(10)</td><td>身份證號</td><td>範例: A123456(7)</td></tr>
+        </tbody>
+    </table>
+
+    <h3>2. Staff 表 (醫護人員資料)</h3>
+    <table>
+        <thead>
+            <tr><th>欄位</th><th>類型</th><th>描述</th><th>備註</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>EmployeeID</strong></td><td>VARCHAR(20)</td><td>員工編號</td><td><strong>Primary Key (PK)</strong></td></tr>
+            <tr><td>Password</td><td>VARCHAR(255)</td><td>登入密碼</td><td>預設為 '0000'</td></tr>
+            <tr><td>Name</td><td>VARCHAR(100)</td><td>姓名</td><td></td></tr>
+            <tr><td>Role</td><td>VARCHAR(10)</td><td>職位</td><td>'nurse' / 'doctor'</td></tr>
+            <tr><td>DoctorRoom</td><td>VARCHAR(10)</td><td>診室</td><td>醫生專用屬性</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3. Appointment 表 (預約記錄)</h3>
+    <table>
+        <thead>
+            <tr><th>欄位</th><th>類型</th><th>描述</th><th>備註</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>ApptID</strong></td><td>INT</td><td>預約編號</td><td><strong>PK, Auto-increment</strong></td></tr>
+            <tr><td>PatientPhone</td><td>VARCHAR(8)</td><td>病人電話</td><td><strong>Foreign Key (FK)</strong> -> Patient.Phone</td></tr>
+            <tr><td>ApptDate</td><td>DATE</td><td>預約日期</td><td></td></tr>
+            <tr><td>ApptSession</td><td>VARCHAR(2)</td><td>時段</td><td>'AM' / 'PM'</td></tr>
+            <tr><td>DoctorName</td><td>VARCHAR(100)</td><td>醫生姓名</td><td></td></tr>
+            <tr><td>QuotaNo</td><td>INT</td><td>籌號</td><td>1-15</td></tr>
+        </tbody>
+    </table>
+
+    <h2>二、 按鈕操作與 SQL 語句對照</h2>
+
+    <table>
+        <thead>
+            <tr><th>功能</th><th>操作與 SQL 語句</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>預約人士登入</strong></td>
+                <td>
+                    <div class="sql-code"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> Patient <span class="keyword">WHERE</span> Phone = <span class="var">:phone</span> <span class="keyword">AND</span> Password = <span class="var">:password</span>;</div>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>醫護人員登入</strong></td>
+                <td>
+                    <div class="sql-code"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> Staff <span class="keyword">WHERE</span> EmployeeID = <span class="var">:empID</span> <span class="keyword">AND</span> Password = <span class="var">:password</span>;</div>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>新預約登記</strong></td>
+                <td>
+                    <div class="sql-code"><span class="keyword">INSERT INTO</span> Patient (Phone, Password, Name, DOB, HKID) 
+<span class="keyword">VALUES</span> (<span class="var">:phone</span>, <span class="var">:pw</span>, <span class="var">:name</span>, <span class="var">:dob</span>, <span class="var">:hkid</span>);</div>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>提交預約 (檢查籌號)</strong></td>
+                <td>
+                    <div class="sql-code"><span class="keyword">SELECT COUNT</span>(*) <span class="keyword">AS</span> Count <span class="keyword">FROM</span> Appointment 
+<span class="keyword">WHERE</span> ApptDate = <span class="var">:date</span> <span class="keyword">AND</span> ApptSession = <span class="var">:session</span> <span class="keyword">AND</span> DoctorName = <span class="var">:doctor</span>;</div>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>醫護查詢 (跨表 Join)</strong></td>
+                <td>
+                    <div class="sql-code"><span class="keyword">SELECT</span> A.*, P.Name <span class="keyword">FROM</span> Appointment A
+<span class="keyword">JOIN</span> Patient P <span class="keyword">ON</span> A.PatientPhone = P.Phone
+<span class="keyword">WHERE</span> A.ApptDate = <span class="var">:date</span> <span class="keyword">ORDER BY</span> A.QuotaNo <span class="keyword">ASC</span>;</div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="sba-box">
+        <h2>DSE ICT SBA 評核建議</h2>
+        <ul>
+            <li><strong>實體拆分：</strong> 解釋 Patient 與 Staff 分開能落實「最小權限原則」及減少數據冗餘。</li>
+            <li><strong>資料完整性：</strong> 強調 <code>Appointment.PatientPhone</code> 是 <strong>Foreign Key</strong>，確保不會出現無主預約。</li>
+            <li><strong>查詢效能：</strong> 討論在 <code>ApptDate</code> 欄位建立索引 (Index) 的必要性，以加速每日名單的檢索。</li>
+        </ul>
+    </div>
+
+</body>
+</html>

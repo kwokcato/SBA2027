@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>新用戶登記</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav-links"><a href="index.html">返回登入入口</a></div>
+    <div class="container">
+        <h2>新預約人士登記</h2>
+        <p style="text-align:center; color: #666; font-size: 0.9em;">(請完成以下資料登記，登記後請重新登入)</p>
+        
+        <div class="form-group">
+            <label>電話號碼</label>
+            <input type="tel" id="regPhone" required placeholder="例如：91234567" maxlength="8">
+        </div>
+        <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="regName" required placeholder="例如：陳大文">
+        </div>
+        <div class="form-group">
+            <label>出生年月日</label>
+            <input type="date" id="regDob" required>
+        </div>
+        <div class="form-group">
+            <label>身份證號碼 (HKID)</label>
+            <input type="text" id="regHkid" required placeholder="例如：A123456(7)" maxlength="10">
+        </div>
+        <div class="form-group">
+            <label>地址</label>
+            <input type="text" id="regAddress" required placeholder="完整地址">
+        </div>
+        
+        <div class="form-group">
+            <label>新建登入密碼</label>
+            <input type="password" id="regPassword" required placeholder="設定您的登入密碼">
+        </div>
+        <div class="form-group">
+            <label>確認密碼</label>
+            <input type="password" id="regPasswordConfirm" required placeholder="再次輸入密碼">
+        </div>
+
+        <button id="registerBtn">完成登記</button>
+    </div>
+
+    <script>
+        document.getElementById('registerBtn').addEventListener('click', function() {
+            const phone = document.getElementById('regPhone').value;
+            const name = document.getElementById('regName').value;
+            const dob = document.getElementById('regDob').value;
+            const hkid = document.getElementById('regHkid').value;
+            const address = document.getElementById('regAddress').value;
+            const password = document.getElementById('regPassword').value;
+            const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+
+            if (!phone || !/^\d{8}$/.test(phone)) { alert('請輸入有效的 8 位電話號碼。'); return; }
+            if (!name || !dob || !hkid || !address || !password || !passwordConfirm) { alert('請填寫所有欄位。'); return; }
+
+            // 核心修訂：驗證密碼一致性
+            if (password !== passwordConfirm) {
+                alert('兩次輸入的密碼不一致，請重新輸入。');
+                return;
+            }
+
+            // 1. 學生 IDEA: 獲取現有用戶數據 (模擬從另一個數據庫讀取)
+            let registeredUsers = JSON.parse(localStorage.getItem('clinic_registered_users')) || [];
+
+            // 2. 建立新用戶對象 (包括密碼)
+            const newUser = {
+                phone, name, dob, hkid, address,
+                password, // 新增：儲存新建密碼
+                regTimestamp: new Date().toLocaleString()
+            };
+
+            // 3. 儲存數據
+            registeredUsers.push(newUser);
+            localStorage.setItem('clinic_registered_users', JSON.stringify(registeredUsers));
+
+            alert('登記成功！由於這是模擬系統，新資料不會寫入 JSON 預設數據庫中。請使用預設電話號碼 (如 90001111) 返回首頁進行登入測試。');
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>
