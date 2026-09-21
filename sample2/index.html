@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>康健綜合診所 - 統一登入 (指定用戶)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>康健綜合診所</h1>
+        <h2>歡迎登入</h2>
+        <p style="text-align: center; color: #666; font-size: 0.9em;">(請選擇身分並進行驗證)</p>
+        
+        <div class="form-group">
+            <label>身分</label>
+            <select id="role">
+                <option value="booker">預約人士 (需使用電話 + OTP)</option>
+                <option value="nurse">護士 (醫護人員)</option>
+                <option value="doctor">醫生 (醫護人員)</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label id="usernameLabel">帳號 (預約人士請輸入電話)</label>
+            <input type="text" id="username" placeholder="電話 / 員工編號 / 醫生姓名" required>
+            <button class="info hidden" id="getOtpBtn">接收一次密碼 (OTP)</button>
+        </div>
+        
+        <div class="form-group hidden" id="otpSection">
+            <label>一次密碼 (OTP) (測試系統預設為 '0000')</label>
+            <input type="password" id="otpCode" maxlength="4" required placeholder="0000">
+        </div>
+
+        <div class="form-group hidden" id="passwordSection">
+            <label>密碼 (測試系統預設為 '0000')</label>
+            <input type="password" id="password" required>
+        </div>
+        
+        <button id="loginBtn">登入</button>
+        
+        <div id="newuserLink" class="nav-links" style="margin-top: 15px;">
+            <p style="color: #666;">還沒有帳號？ <a href="newuser.html">立即登記</a></p>
+        </div>
+
+        <script id="userData" type="application/json">
+        {
+            "users": {
+                "booker": [
+                    { "phone": "90001111", "name": "Chan Tai Man", "dob": "1990-01-01", "hkid": "A123456(7)", "address": "九龍旺角彌敦道" },
+                    { "phone": "98881234", "name": "Lee Hoi Sin", "dob": "1995-05-05", "hkid": "A876543(2)", "address": "新界沙田火車站" },
+                    { "phone": "91234567", "name": "Ho Tung Nam", "dob": "1988-08-08", "hkid": "B987654(3)", "address": "港島中環皇后大道" }
+                ],
+                "nurse": [
+                    { "id": "nurse01", "password": "0000", "name": "Nurse Lucy" },
+                    { "id": "nurse02", "password": "0000", "name": "Nurse Mary" }
+                ],
+                "doctor": [
+                    { "name": "Dr. Chan", "password": "0000", "room": "A01" },
+                    { "name": "Dr. Wong", "password": "0000", "room": "B02" }
+                ]
+            }
+        }
+        </script>
+        
+        <div style="margin-top: 20px; font-size: 0.9em; color: #666; border: 1px solid #ddd; padding: 10px;">
+            <strong>測試提示 (預設 OTP/密碼皆為 '0000')：</strong><br>
+            - 預約人士：輸入 '90001111' (Chan Tai Man)，按「接收」，輸入 '0000'。<br>
+            - 護士：選「護士」，輸入 'nurse01' / '0000'。<br>
+            - 醫生：選「醫生」，輸入 'Dr. Chan' / '0000'。
+        </div>
+    </div>
+
+    <script>
+        // --- 核心初始化邏輯 ---
+        // 學生 IDEA: 在系統入口首頁加載時，模擬從外部加載預設預約數據到本地模擬數據庫 (localStorage)
+        window.onload = function() {
+            // 檢查是否已經初始化過，防止重複
+            if (!localStorage.getItem('clinic_appts_initialized')) {
+                // 指定的預設預約數據 (保持原本的數據)
+                const defaultAppointments = [
+                    // Chan Tai Man (90001111)
+                    { id: Date.now()+1, name: "Chan Tai Man", phone: "90001111", date: "2026-05-10", session: "AM", doctor: "Dr. Chan", quotaNumber: 1, timestamp: new Date().toLocaleString() },
+                    { id: Date.now()+2, name: "Chan Tai Man", phone: "90001111", date: "2026-05-16", session: "AM", doctor: "Dr. Wong", quotaNumber: 1, timestamp: new Date().toLocaleString() },
+                    
+                    // Lee Hoi Sin (98881234)
+                    { id: Date.now()+3, name: "Lee Hoi Sin", phone: "98881234", date: "2026-05-10", session: "AM", doctor: "Dr. Chan", quotaNumber: 2, timestamp: new Date().toLocaleString() },
+                    { id: Date.now()+4, name: "Lee Hoi Sin", phone: "98881234", date: "2026-05-16", session: "AM", doctor: "Dr. Wong", quotaNumber: 2, timestamp: new Date().toLocaleString() },
+                    
+                    // Ho Tung Nam (91234567)
+                    { id: Date.now()+5, name: "Ho Tung Nam", phone: "91234567", date: "2026-05-16", session: "AM", doctor: "Dr. Wong", quotaNumber: 3, timestamp: new Date().toLocaleString() },
+
+                    // --- 修訂: 加入一個預設記錄 91234567 下午 DR. Chan ---
+                    { id: Date.now()+6, name: "Ho Tung Nam", phone: "91234567", date: "2026-05-16", session: "PM", doctor: "Dr. Chan", quotaNumber: 1, timestamp: new Date().toLocaleString() }
+                ];
+
+                localStorage.setItem('clinic_appts', JSON.stringify(defaultAppointments));
+                localStorage.setItem('clinic_appts_initialized', 'true'); // 標記為已初始化
+                alert('系統已成功初始化，預載 6 筆指定預約紀錄。您現在可以使用預載用戶登入，醫護人員亦可直接查詢名單。');
+            }
+        };
+        // --- 初始化結束 ---
+
+        // (這裡保持原本的登入邏輯 JavaScript ... )
+        const getOtpBtn = document.getElementById('getOtpBtn');
+        const otpSection = document.getElementById('otpSection');
+        const passwordSection = document.getElementById('passwordSection');
+        const newuserLink = document.getElementById('newuserLink');
+        const loginBtn = document.getElementById('loginBtn');
+        const usernameInput = document.getElementById('username');
+
+        function setupUI(role) {
+            if (role === 'booker') {
+                getOtpBtn.classList.remove('hidden');
+                otpSection.classList.add('hidden');
+                passwordSection.classList.add('hidden');
+                newuserLink.classList.remove('hidden');
+                loginBtn.disabled = true;
+            } else {
+                getOtpBtn.classList.add('hidden');
+                otpSection.classList.add('hidden');
+                passwordSection.classList.remove('hidden');
+                newuserLink.classList.add('hidden');
+                loginBtn.disabled = false;
+            }
+            usernameInput.value = '';
+            document.getElementById('otpCode').value = '';
+            document.getElementById('password').value = '';
+        }
+        setupUI('booker'); // 預設
+
+        // 1. 角色切換動態 UI
+        document.getElementById('role').addEventListener('change', function() {
+            setupUI(this.value);
+        });
+
+        // 2. 預約人士專用：獲取 OTP (模擬 2FA 流程)
+        getOtpBtn.addEventListener('click', function() {
+            const phone = usernameInput.value;
+            if (!/^\d{8}$/.test(phone)) { alert('請輸入有效的 8 位數字電話。'); return; }
+
+            // 模擬從 JSON FILE (USER DATABASE) 檢查用戶是否存在
+            const jsonData = JSON.parse(document.getElementById('userData').textContent);
+            const userExists = jsonData.users.booker.some(u => u.phone === phone);
+
+            if (!userExists) {
+                alert('很報歉，該電話尚未登記。請先按下方連結進行新用戶登記。');
+                return;
+            }
+
+            // 模擬發送 OTP
+            alert(`[模擬] 一次密碼 (OTP) 已發送到 ${phone}。測試系統預設為 '0000'。`);
+            otpSection.classList.remove('hidden');
+            this.disabled = true;
+            usernameInput.disabled = true;
+            loginBtn.disabled = false;
+        });
+
+        // 3. 統一登入邏輯
+        loginBtn.addEventListener('click', function() {
+            const role = document.getElementById('role').value;
+            const username = usernameInput.value;
+            const jsonData = JSON.parse(document.getElementById('userData').textContent);
+            const userList = jsonData.users[role];
+
+            let matchedUser = null;
+
+            if (role === 'booker') {
+                // 預約人士：驗證 OTP
+                const otp = document.getElementById('otpCode').value;
+                if (otp === '0000') {
+                    matchedUser = userList.find(u => u.phone === username);
+                }
+            } else {
+                // 醫護人員：驗證傳統密碼
+                const password = document.getElementById('password').value;
+                if (role === 'nurse') {
+                    matchedUser = userList.find(u => u.id === username && u.password === password);
+                } else if (role === 'doctor') {
+                    matchedUser = userList.find(u => u.name === username && u.password === password);
+                }
+            }
+
+            if (matchedUser) {
+                // 登入成功，設定 Session 資料
+                sessionStorage.setItem('userRole', role);
+                
+                if (role === 'booker') {
+                    sessionStorage.setItem('currentPatient', JSON.stringify(matchedUser));
+                    window.location.href = 'book.html';
+                } else {
+                    // 醫護人員：使用其姓名作為顯示
+                    sessionStorage.setItem('username', matchedUser.name);
+                    window.location.href = 'staff.html';
+                }
+            } else {
+                alert('登入失敗，請檢查帳號、OTP 或密碼 (測試系統密碼/OTP 預設為 0000)。');
+            }
+        });
+    </script>
+
+    <div class="container" style="margin-top: 40px; border-top: 2px solid #ddd; padding-top: 20px; background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.05);">
+        <h3>[ 示範與評核專用 ] 系統預設資料</h3>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px; text-align: center;">為方便測試，系統已初始化以下數據。所有密碼/OTP 預設為 '0000'。</p>
+
+        <h4>1. 預設帳戶 (User Database)</h4>
+        <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.85em; margin-bottom: 15px; border: 1px solid #eee;">
+            <thead>
+                <tr>
+                    <th style="background-color: #f9f9f9; padding: 8px;">身分 (Role)</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">帳號 / 電話 (Username/Phone)</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">姓名 (Name)</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">備註 (Room/Specialty)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>預約人士</td><td>90001111</td><td>Chan Tai Man</td><td>DOB: 1990-01-01</td></tr>
+                <tr><td>預約人士</td><td>98881234</td><td>Lee Hoi Sin</td><td>DOB: 1995-05-05</td></tr>
+                <tr><td>預約人士</td><td>91234567</td><td>Ho Tung Nam</td><td>DOB: 1988-08-08</td></tr>
+                <tr><td>護士</td><td>nurse01</td><td>Nurse Lucy</td><td>員工編號: nurse01</td></tr>
+                <tr><td>醫生</td><td>Dr. Chan</td><td>Dr. Chan</td><td>診室: A01 (家庭科)</td></tr>
+                <tr><td>醫生</td><td>Dr. Wong</td><td>Dr. Wong</td><td>診室: B02 (專科)</td></tr>
+            </tbody>
+        </table>
+
+        <h4>2. 預設預約紀錄 (Appointment Database)</h4>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px; text-align: center;">以下紀錄可用於測試醫護介面的查詢功能。</p>
+        <table class="data-table" style="width: 100%; border-collapse: collapse; font-size: 0.85em; margin-bottom: 15px; border: 1px solid #eee;">
+            <thead>
+                <tr>
+                    <th style="background-color: #f9f9f9; padding: 8px;">病人電話 (FK)</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">病人姓名</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">預約日期</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">時段</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">醫生</th>
+                    <th style="background-color: #f9f9f9; padding: 8px;">籌號</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>90001111</td><td>Chan Tai Man</td><td>2026-05-10</td><td>AM</td><td>Dr. Chan</td><td><strong>1</strong></td></tr>
+                <tr><td>98881234</td><td>Lee Hoi Sin</td><td>2026-05-10</td><td>AM</td><td>Dr. Chan</td><td><strong>2</strong></td></tr>
+                <tr><td>90001111</td><td>Chan Tai Man</td><td>2026-05-16</td><td>AM</td><td>Dr. Wong</td><td><strong>1</strong></td></tr>
+                <tr><td>98881234</td><td>Lee Hoi Sin</td><td>2026-05-16</td><td>AM</td><td>Dr. Wong</td><td><strong>2</strong></td></tr>
+                <tr><td>91234567</td><td>Ho Tung Nam</td><td>2026-05-16</td><td>AM</td><td>Dr. Wong</td><td><strong>3</strong></td></tr>
+                <tr style="background-color: #ecf0f1;"><td>91234567</td><td>Ho Tung Nam</td><td>2026-05-16</td><td>PM</td><td>Dr. Chan</td><td><strong>1</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+    </body>
+</html>
