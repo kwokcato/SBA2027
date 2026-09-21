@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>醫護管理系統</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav-links">
+        <span id="welcomeMsg"></span> | 
+        <a href="#" id="logoutBtn">登出</a>
+    </div>
+    <div class="container">
+        <h2>管理與查詢介面</h2>
+
+        <div style="border: 1px solid #ddd; padding: 15px; background: #fff;">
+            <h3>查詢條件</h3>
+            <div class="form-group">
+                <label>日期 (留空為所有日期)</label>
+                <input type="date" id="searchDate">
+            </div>
+            
+            <div id="nurse-only-controls" class="hidden">
+                <div class="form-group">
+                    <label>病人電話 (精確查詢)</label>
+                    <input type="tel" id="searchPhone" placeholder="輸入電話號碼" maxlength="8">
+                </div>
+                <div class="form-group">
+                    <label>醫生</label>
+                    <select id="searchDoctor">
+                        <option value="All">所有醫生</option>
+                        <option value="Dr. Chan">陳醫生</option>
+                        <option value="Dr. Wong">王醫生</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="searchBtn">執行查詢</button>
+        </div>
+
+        <h3>預約名單</h3>
+        <table class="data-table" id="resultTable">
+            <thead>
+                <tr>
+                    <th>籌號</th>
+                    <th>日期</th>
+                    <th>時段</th>
+                    <th>病人姓名</th>
+                    <th>電話</th>
+                    <th>醫生</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 1. 權限檢查與介面設定
+        const role = sessionStorage.getItem('userRole');
+        const username = sessionStorage.getItem('username');
+        
+        if (!role || !['nurse', 'doctor'].includes(role)) {
+            alert('未授權訪問。');
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('welcomeMsg').innerText = `歡迎，${username} (${role==='nurse'?'護士':'醫生'})`;
+
+        // 如果是護士，顯示高級查詢控制
+        if (role === 'nurse') {
+            document.getElementById('nurse-only-controls').classList.remove('hidden');
+        }
+
+        // 2. 查詢邏輯
+        document.getElementById('searchBtn').addEventListener('click', performSearch);
+
+        function performSearch() {
+            // 從localStorage獲取現有預約 (模擬從 APPOINTMENT DATABASE 讀取)
+            const appointments = JSON.parse(localStorage.getItem('clinic_appts')) || [];
+            const searchDate = document.getElementById('searchDate').value;
+            const resultBody = document.getElementById('resultBody');
+            resultBody.innerHTML = ''; // 清空舊結果
+
+            let filtered = appointments;
+
+            // 通用條件：日期
+            if (searchDate) {
+                filtered = filtered.filter(a => a.date === searchDate);
+            }
+
+            if (role === 'nurse') {
+                // 護士條件 1: 病人電話
+                const searchPhone = document.getElementById('searchPhone').value;
+                if (searchPhone) {
+                    filtered = filtered.filter(a => a.phone === searchPhone);
+                }
+                // 護士條件 2: 醫生
+                const searchDoctor = document.getElementById('searchDoctor').value;
+                if (searchDoctor !== 'All') {
+                    filtered = filtered.filter(a => a.doctor === searchDoctor);
+                }
+            } else if (role === 'doctor') {
+                // 醫生條件：只能看自己的預約
+                filtered = filtered.filter(a => a.doctor === username);
+            }
+
+            // 排序：日期 -> 時段 (AM/PM) -> 籌號
+            filtered.sort((a, b) => {
+                if (a.date !== b.date) return a.date.localeCompare(b.date);
+                if (a.session !== b.session) return b.session.localeCompare(a.session); // AM before PM
+                return a.quotaNumber - b.quotaNumber;
+            });
+
+            // 3. 顯示結果
+            if (filtered.length === 0) {
+                resultBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">找不到符合條件的預約紀錄。</td></tr>';
+                return;
+            }
+
+            filtered.forEach(a => {
+                const row = `
+                    <tr>
+                        <td><strong>${a.quotaNumber}</strong></td>
+                        <td>${a.date}</td>
+                        <td>${a.session==='AM'?'上午':'下午'}</td>
+                        <td>${a.name}</td>
+                        <td>${a.phone}</td>
+                        <td>${a.doctor}</td>
+                    </tr>
+                `;
+                resultBody.innerHTML += row;
+            });
+        }
+
+        // 登出
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            sessionStorage.clear();
+            window.location.href = 'index.html';
+        });
+
+        // 頁面加載時自動執行一次基本查詢 (模擬查詢當天預約)
+        const todayStr = new Date().toISOString().split('T')[0];
+        document.getElementById('searchDate').value = todayStr;
+        performSearch();
+
+    </script>
+</body>
+</html>

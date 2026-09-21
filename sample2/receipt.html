@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>預約收據</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>預約成功</h2>
+        <p style="text-align:center; color: #666;">請在到診時出示此收據。您可以截圖或列印此頁面。</p>
+        
+        <div class="receipt-box" id="receiptContent">
+            <h3>康健綜合診所 - 預約收據</h3>
+            <hr>
+            <p><strong>預約編號：</strong> <span id="r-id"></span></p>
+            <p><strong>病人姓名：</strong> <span id="r-name"></span></p>
+            <p><strong>電話號碼：</strong> <span id="r-phone"></span></p>
+            <p><strong>到診日期：</strong> <span id="r-date"></span></p>
+            <p><strong>到診時段：</strong> <span id="r-session"></span> (09:00-12:00 / 14:00-17:00)</p>
+            <p><strong>指定醫生：</strong> <span id="r-doctor"></span></p>
+            <div style="text-align: center; margin-top: 20px; border: 1px solid #333; padding: 10px;">
+                <span style="font-size: 1.2em;">您的籌號：</span><br>
+                <span style="font-size: 3em; font-weight: bold;" id="r-quota"></span>
+            </div>
+            <p style="font-size: 0.8em; color: #666; margin-top: 20px;">登記時間：<span id="r-ts"></span></p>
+        </div>
+        
+        <button class="secondary" onclick="window.print()">列印 / 儲存為 PDF</button>
+        <button style="margin-top: 10px;" onclick="window.location.href='index.html'">返回首頁</button>
+    </div>
+
+    <script>
+        // 從 sessionStorage 讀取剛完成的預約
+        const apptData = JSON.parse(sessionStorage.getItem('lastAppt'));
+        
+        if (!apptData) {
+            alert('找不到預約紀錄。');
+            window.location.href = 'index.html';
+        } else {
+            document.getElementById('r-id').innerText = apptData.id;
+            document.getElementById('r-name').innerText = apptData.name;
+            document.getElementById('r-phone').innerText = apptData.phone;
+            document.getElementById('r-date').innerText = apptData.date;
+            document.getElementById('r-session').innerText = apptData.session === 'AM' ? '上午' : '下午';
+            document.getElementById('r-doctor').innerText = apptData.doctor;
+            document.getElementById('r-quota').innerText = apptData.quotaNumber;
+            document.getElementById('r-ts').innerText = apptData.timestamp;
+        }
+    </script>
+</body>
+</html>
